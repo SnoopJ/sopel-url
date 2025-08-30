@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+platforms = ["Linux x86, x86-64"]
+
+[tool.setuptools.packages.find]
+include = ["sopel_url", "sopel_url.*"]
+namespaces = false
+
+[project]
+name = "sopel-url"
+version = "1.0.0.dev0"
+description = "URL auto title plugin for Sopel"
+keywords = [
+  "sopel",
+  "plugin",
+  "http",
+  "bot",
+  "irc",
+]
+maintainers = [
+  { name="Florian Strzelecki", email="florian.strzelecki@gmail.com" },
+]
+authors = [
+  { name="dgw", email="dgw@technobabbl.es" },
+  { name="Florian Strzelecki", email="florian.strzelecki@gmail.com" },
+]
+
+readme = "README.rst"
+license = { text="EFL-2.0" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat :: Internet Relay Chat",
+]
+requires-python = ">=3.7, <4"
+dependencies = [
+    "sopel>=8.0",
+    "requests",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/sopel-irc/sopel-url"
+"Bug Tracker" = "https://github.com/sopel-irc/sopel-url/issues"
+
+[project.entry-points."sopel.plugins"]
+url = "sopel_url.plugin"
+
+[dependency-groups]
+dev = [ # These are requirements to develop the plugin itself.
+    {include-group = "lint"},
+    {include-group = "test"},
+]
+lint = [
+    "flake8",
+    "flake8-pyproject",
+    "pylint",
+    "coverage",
+    "coverage[toml]",
+    "pyroma",
+    "mypy",
+    "types-requests",
+]
+test = [
+    "pytest",
+]
+
+[tool.flake8]
+max-line-length = 79
+
+[tool.isort]
+line_length = 79
+known_third_party = ["sopel"]
+known_first_party = ["sopel_url"]
+
+[tool.pytest.ini_options]
+python_files = "*.py"
+addopts = "--tb=short -p no:nose"
+markers = [
+    "vcr",
+    "online",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["sopel_url"]
