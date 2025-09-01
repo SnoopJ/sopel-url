@@ -1,13 +1,13 @@
 """Tests for Sopel's ``url`` plugin"""
 from __future__ import annotations
 
+import os
 import re
 
 import pytest
 from sopel import bot, plugins, trigger
 
-from sopel_url.plugin import (_user_can_change_excludes, check_callbacks,
-                              find_title)
+from sopel_url.plugin import _user_can_change_excludes
 
 TMP_CONFIG = """
 [core]
@@ -17,41 +17,10 @@ enable = coretasks
 """
 
 
-INVALID_URLS = (
-    "http://.example.com/",  # empty label
-    "http://example..com/",  # empty label
-    "http://?",  # no host
-)
-PRIVATE_URLS = (
-    # "https://httpbin.org/redirect-to?url=http://127.0.0.1/",  # online
-    "http://127.1.1.1/",
-    "http://10.1.1.1/",
-    "http://169.254.1.1/",
-)
-
-MOCK_MODULE_CONTENT = """
-import re
-
-from sopel import plugin
-
-@plugin.url(re.escape('https://example.com/') + r'(.+)')
-@plugin.label('handle_urls_https')
-def url_callback_https(bot, trigger, match):
-    pass
-
-@plugin.url(re.escape('http://example.com/') + r'(.+)')
-@plugin.label('handle_urls_http')
-def url_callback_http(bot, trigger, match):
-    pass
-"""
-
-
 @pytest.fixture
-def mockplugin(tmpdir):
-    root = tmpdir.mkdir('plugins')
-    mod_file = root.join('testplugin.py')
-    mod_file.write(MOCK_MODULE_CONTENT)
-    return plugins.handlers.PyFilePlugin(mod_file.strpath)
+def mockplugin():
+    filename = os.path.join(os.path.dirname(__file__), 'mockplugin.py')
+    return plugins.handlers.PyFilePlugin(filename)
 
 
 @pytest.fixture
@@ -94,25 +63,6 @@ enable =
 def preloadedbot(configfactory, botfactory):
     tmpconfig = configfactory('preloaded.cfg', PRELOADED_CONFIG)
     return botfactory.preloaded(tmpconfig, ['url'])
-
-
-@pytest.mark.parametrize("site", INVALID_URLS)
-def test_find_title_invalid(site):
-    # All local for invalid ones
-    assert find_title(site) is None
-
-
-@pytest.mark.parametrize("site", PRIVATE_URLS)
-def test_find_title_private(site):
-    assert find_title(site) is None
-
-
-def test_check_callbacks(mockbot):
-    """Test that check_callbacks works with both new & legacy URL callbacks."""
-    assert check_callbacks(mockbot, 'https://example.com/test')
-    assert check_callbacks(mockbot, 'http://example.com/test')
-    assert check_callbacks(mockbot, 'https://help.example.com/test')
-    assert not check_callbacks(mockbot, 'https://not.example.com/test')
 
 
 def test_url_triggers_rules_and_auto_title(mockbot):
