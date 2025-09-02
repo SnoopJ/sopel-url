@@ -158,6 +158,141 @@ def test_title_command(
     assert 'https://test.example.com' == found
 
 
+def test_title_command_ignored(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [
+            URL_MAPPING_HTTP_IGNORED[url]
+            for url in urls
+        ],
+    )
+    irc.say(user, '#channel', '.title https://example.com')
+    assert len(irc.bot.backend.message_sent) == 1
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+    )
+
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
+    irc.say(user, '#channel', '.title http://example.com')
+    assert len(irc.bot.backend.message_sent[1:]) == 0
+
+    assert 'http://example.com' != irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
+    irc.say(user, '#channel', '.title https://test.example.com')
+    assert len(irc.bot.backend.message_sent[1:]) == 1
+    assert irc.bot.backend.message_sent[1:] == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title (Subdomain) "
+        "| test.example.com ( https://tinyurl.com/yck2cftj )",
+    )
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
+
+
+def test_title_command_no_args(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [
+            URL_MAPPING[url]
+            for url in urls
+        ],
+    )
+    irc.say(user, '#channel', '.title')
+    assert len(irc.bot.backend.message_sent) == 0
+    assert '#channel' not in irc.bot.memory['last_seen_url']
+
+    irc.say(user, '#channel', '.title https://example.com')
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+    )
+
+    irc.say(user, '#channel', '.title')
+    assert len(irc.bot.backend.message_sent[1:]) == 1
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+    )
+
+
+def test_title_command_multi_urls(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [
+            URL_MAPPING[url]
+            for url in urls
+        ],
+    )
+    urls = [
+        'https://example.com',
+        'http://example.com',
+        'https://test.example.com',
+    ]
+    irc.say(user, '#channel', '.title %s' % ' '.join(urls))
+    assert len(irc.bot.backend.message_sent) == 3
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+        "PRIVMSG #channel :TestUser: Example Website Title (Insecure) "
+        "| example.com",
+        "PRIVMSG #channel :TestUser: Example Website Title (Subdomain) "
+        "| test.example.com ( https://tinyurl.com/yck2cftj )",
+    )
+
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
+
+
+def test_title_command_multi_url_ignored(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [
+            URL_MAPPING_HTTP_IGNORED[url]
+            for url in urls
+        ],
+    )
+
+    urls = [
+        'https://example.com',
+        'http://example.com',
+        'https://test.example.com',
+    ]
+    message = '.title %s' % ' '.join(urls)
+    print(message)
+    irc.say(user, '#channel', message)
+    assert len(irc.bot.backend.message_sent) == 2
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+        "PRIVMSG #channel :TestUser: Example Website Title (Subdomain) "
+        "| test.example.com ( https://tinyurl.com/yck2cftj )",
+    )
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
+
+
 def test_title_auto(
     irc: MockIRCServer,
     user: MockUser,
@@ -254,7 +389,7 @@ def test_title_auto_ignored_url(
 
     found = irc.bot.memory['last_seen_url']['#channel']
     assert 'http://example.com' == found, (
-        'Ignored URL are still "the last seen".'
+        'Ignored URL are still "the last seen". Unlike the command...'
     )
 
     irc.say(user, '#channel', 'Here is my (sub) URL https://test.example.com')
