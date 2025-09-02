@@ -280,7 +280,6 @@ def test_title_command_multi_url_ignored(
         'https://test.example.com',
     ]
     message = '.title %s' % ' '.join(urls)
-    print(message)
     irc.say(user, '#channel', message)
     assert len(irc.bot.backend.message_sent) == 2
     assert irc.bot.backend.message_sent == rawlist(
@@ -291,6 +290,72 @@ def test_title_command_multi_url_ignored(
     assert '#channel' in irc.bot.memory['last_seen_url']
     found = irc.bot.memory['last_seen_url']['#channel']
     assert 'https://test.example.com' == found
+
+
+def test_title_command_fail_to_process_urls(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [],
+    )
+
+    irc.say(user, '#channel', '.title https://example.com')
+    assert len(irc.bot.backend.message_sent) == 1
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Sorry, fetching that title failed. "
+        "Make sure the site is working."
+    )
+    assert '#channel' not in irc.bot.memory['last_seen_url']
+
+    irc.say(
+        user,
+        '#channel',
+        '.title https://example.com https://test.example.com',
+    )
+    assert len(irc.bot.backend.message_sent[1:]) == 1
+    assert irc.bot.backend.message_sent[1:] == rawlist(
+        "PRIVMSG #channel :TestUser: Sorry, "
+        "I couldn't fetch titles for any of those."
+    )
+    assert '#channel' not in irc.bot.memory['last_seen_url']
+
+
+def test_title_command_partial_fail_to_process_urls(
+    irc: MockIRCServer,
+    user: MockUser,
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(
+        plugin,
+        'process_urls',
+        lambda bot, urls, requested=False: [
+            backend.URLInfo(
+                url='https://example.com',
+                title='Example Website Title',
+                hostname='example.com',
+                tinyurl=None,
+                ignored=False,
+            ),
+        ],
+    )
+
+    irc.say(
+        user,
+        '#channel',
+        '.title https://example.com https://test.example.com',
+    )
+    assert len(irc.bot.backend.message_sent) == 2
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Example Website Title | example.com",
+        "PRIVMSG #channel :TestUser: I couldn't get all of the titles, "
+        "but I fetched what I could!"
+    )
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
 
 
 def test_title_auto(
