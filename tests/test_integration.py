@@ -135,6 +135,9 @@ def test_title_command(
         "PRIVMSG #channel :TestUser: Example Website Title | example.com",
     )
 
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
     irc.say(user, '#channel', '.title http://example.com')
     assert len(irc.bot.backend.message_sent[1:]) == 1
     assert irc.bot.backend.message_sent[1:] == rawlist(
@@ -142,12 +145,17 @@ def test_title_command(
         "| example.com",
     )
 
+    assert 'http://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
     irc.say(user, '#channel', '.title https://test.example.com')
     assert len(irc.bot.backend.message_sent[2:]) == 1
     assert irc.bot.backend.message_sent[2:] == rawlist(
         "PRIVMSG #channel :TestUser: Example Website Title (Subdomain) "
         "| test.example.com ( https://tinyurl.com/yck2cftj )",
     )
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
 
 
 def test_title_auto(
@@ -169,6 +177,9 @@ def test_title_auto(
         "PRIVMSG #channel :[url] Example Website Title | example.com",
     )
 
+    assert '#channel' in irc.bot.memory['last_seen_url']
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
     irc.say(user, '#channel', 'Here is my URL http://example.com (not safe!)')
     assert len(irc.bot.backend.message_sent[1:]) == 1
     assert irc.bot.backend.message_sent[1:] == rawlist(
@@ -176,12 +187,17 @@ def test_title_auto(
         "| example.com",
     )
 
+    assert 'http://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
     irc.say(user, '#channel', 'Here is my (sub) URL https://test.example.com')
     assert len(irc.bot.backend.message_sent[2:]) == 1
     assert irc.bot.backend.message_sent[2:] == rawlist(
         "PRIVMSG #channel :[url] Example Website Title (Subdomain) "
         "| test.example.com ( https://tinyurl.com/yck2cftj )",
     )
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
 
 
 def test_title_auto_disabled_auto_title(
@@ -201,12 +217,15 @@ def test_title_auto_disabled_auto_title(
     )
     irc.say(user, '#channel', 'Here is my URL https://example.com')
     assert len(irc.bot.backend.message_sent) == 0
+    assert '#channel' not in irc.bot.memory['last_seen_url']
 
     irc.say(user, '#channel', 'Here is my URL http://example.com (not safe!)')
     assert len(irc.bot.backend.message_sent) == 0
+    assert '#channel' not in irc.bot.memory['last_seen_url']
 
     irc.say(user, '#channel', 'Here is my (sub) URL https://test.example.com')
     assert len(irc.bot.backend.message_sent) == 0
+    assert '#channel' not in irc.bot.memory['last_seen_url']
 
 
 def test_title_auto_ignored_url(
@@ -228,8 +247,15 @@ def test_title_auto_ignored_url(
         "PRIVMSG #channel :[url] Example Website Title | example.com",
     )
 
+    assert 'https://example.com' == irc.bot.memory['last_seen_url']['#channel']
+
     irc.say(user, '#channel', 'Here is my URL http://example.com (not safe!)')
     assert len(irc.bot.backend.message_sent[1:]) == 0
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'http://example.com' == found, (
+        'Ignored URL are still "the last seen".'
+    )
 
     irc.say(user, '#channel', 'Here is my (sub) URL https://test.example.com')
     assert len(irc.bot.backend.message_sent[1:]) == 1
@@ -237,6 +263,9 @@ def test_title_auto_ignored_url(
         "PRIVMSG #channel :[url] Example Website Title (Subdomain) "
         "| test.example.com ( https://tinyurl.com/yck2cftj )",
     )
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
 
 
 def test_title_auto_prevent_bot_trigger(
@@ -259,3 +288,6 @@ def test_title_auto_prevent_bot_trigger(
         "( https://tinyurl.com/yck2cftj )",
     )
     assert len(irc.bot.backend.message_sent) == 0
+
+    found = irc.bot.memory['last_seen_url']['#channel']
+    assert 'https://test.example.com' == found
