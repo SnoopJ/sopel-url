@@ -3,11 +3,17 @@ from __future__ import annotations
 
 import os
 import re
+from typing import TYPE_CHECKING
 
 import pytest
 from sopel import bot, plugins, trigger
 
-from sopel_url.plugin import _user_can_change_excludes
+from sopel_url.config import UrlSection
+from sopel_url.plugin import _user_can_change_excludes, setup
+
+if TYPE_CHECKING:
+    from sopel.tests.factories import BotFactory, ConfigFactory
+
 
 TMP_CONFIG = """
 [core]
@@ -18,13 +24,16 @@ enable = coretasks
 
 
 @pytest.fixture
-def mockplugin():
+def mockplugin() -> plugins.handlers.PyFilePlugin:
     filename = os.path.join(os.path.dirname(__file__), 'mockplugin.py')
     return plugins.handlers.PyFilePlugin(filename)
 
 
 @pytest.fixture
-def mockbot(configfactory, mockplugin):
+def mockbot(
+    configfactory: ConfigFactory,
+    mockplugin: plugins.handlers.PyFilePlugin,
+) -> bot.Sopel:
     tmpconfig = configfactory('test.cfg', TMP_CONFIG)
     url_plugin = plugins.handlers.PyModulePlugin('url', 'sopel.builtins')
 
@@ -60,9 +69,52 @@ enable =
 
 
 @pytest.fixture
-def preloadedbot(configfactory, botfactory):
+def preloadedbot(configfactory: ConfigFactory, botfactory: BotFactory):
     tmpconfig = configfactory('preloaded.cfg', PRELOADED_CONFIG)
     return botfactory.preloaded(tmpconfig, ['url'])
+
+
+SETUP_CONFIG = PRELOADED_CONFIG + """
+[url]
+enable_auto_title = yes
+exclude =
+    http://example\\.com
+    https://example\\.com
+exclusion_char = $
+shorten_url_length = 79
+enable_private_resolution = no
+"""
+
+
+def test_setup(configfactory: ConfigFactory, botfactory: BotFactory):
+    settings = configfactory('test.cfg', SETUP_CONFIG)
+
+    mockbot = botfactory.preloaded(settings)
+
+    assert 'url_exclude' not in mockbot.memory
+    assert 'last_seen_url' not in mockbot.memory
+    assert 'shortened_urls' not in mockbot.memory
+
+    setup(mockbot)
+
+    assert isinstance(mockbot.settings.url, UrlSection)
+    assert mockbot.settings.url.enable_auto_title is True
+    assert mockbot.settings.url.exclude == [
+        r'http://example\.com',
+        r'https://example\.com',
+    ]
+    assert mockbot.settings.url.exclusion_char == '$'
+    assert mockbot.settings.url.shorten_url_length == 79
+    assert mockbot.settings.url.enable_private_resolution is False
+
+    assert 'url_exclude' in mockbot.memory
+    assert len(mockbot.memory['url_exclude']) == 2
+    assert re.compile(r'http://example\.com') in mockbot.memory['url_exclude']
+    assert re.compile(r'https://example\.com') in mockbot.memory['url_exclude']
+    assert 'last_seen_url' in mockbot.memory
+    assert not mockbot.memory['last_seen_url']
+    assert 'shortened_urls' in mockbot.memory
+    assert not mockbot.memory['shortened_urls']
 
 
 def test_url_triggers_rules_and_auto_title(mockbot):

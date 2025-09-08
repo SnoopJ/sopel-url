@@ -1,6 +1,7 @@
 """Test the behavior of the plugin's rules."""
 from __future__ import annotations
 
+import io
 import typing
 
 import pytest
@@ -23,7 +24,7 @@ owner = testnick
 nick = TestBot
 enable =
     coretasks
-    remind
+    url
 
 [url]
 enable_auto_title = true
@@ -114,6 +115,31 @@ URL_MAPPING_HTTP_IGNORED = {
         ignored=False,
     ),
 }
+
+
+def test_configure(tmpconfig: Config, monkeypatch: MonkeyPatch):
+    user_inputs = io.StringIO('\n'.join((
+        'n',  # enable_auto_title
+        r'https://example\.com', '', ''  # exclude
+        '$',  # exclusion_char
+        '79',  # shorten_url_length
+        'y',  # enable_private_resolution
+    )))
+    monkeypatch.setattr('sys.stdin', user_inputs)
+    plugin.configure(tmpconfig)
+
+    assert 'url' in tmpconfig
+    assert hasattr(tmpconfig.url, 'enable_auto_title')
+    assert hasattr(tmpconfig.url, 'exclude')
+    assert hasattr(tmpconfig.url, 'exclusion_char')
+    assert hasattr(tmpconfig.url, 'shorten_url_length')
+    assert hasattr(tmpconfig.url, 'enable_private_resolution')
+
+    assert tmpconfig.url.enable_auto_title is False
+    assert tmpconfig.url.exclude == [r'https://example\.com']
+    assert tmpconfig.url.exclusion_char == '$'
+    assert tmpconfig.url.shorten_url_length == 79
+    assert tmpconfig.url.enable_private_resolution is True
 
 
 def test_title_command(
