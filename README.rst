@@ -4,7 +4,7 @@ sopel-url
 
 This plugin allows the bot to fetch URLs from messages and to reply with each
 URL's title from the HTML content, if possible. You can trigger that with the
-``.title <url>``command::
+``.title <url>`` command::
 
     [08:42] Exirel: .title https://sopel.chat
     [08:42] Sopel: xrl: Sopel - The Python IRC Bot - Sopel | sopel.chat
