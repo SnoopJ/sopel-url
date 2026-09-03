@@ -50,6 +50,10 @@ def configure(config: Config) -> None:
         'enable_private_resolution',
         'Allow all requests to private (local network) IP addresses?'
     )
+    config.url.configure_setting(
+        'title_on_error',
+        'Attempt to title URLs that produce an HTTP error?'
+    )
 
 
 def setup(bot: Sopel) -> None:

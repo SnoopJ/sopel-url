@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import os
 import re
+import unittest.mock
+from io import BytesIO
 
 import pytest
+import requests
 from sopel import bot, plugins
 
 from sopel_url.backend import check_callbacks, find_title
@@ -49,6 +52,15 @@ def mockbot(configfactory, mockplugin):
     return sopel
 
 
+@pytest.fixture
+def error_response():
+    response = requests.Response()
+    response.status_code = 403
+    response.raw = BytesIO(b"<html><head><title>You don't belong here</title></head></html>")
+
+    yield response
+
+
 INVALID_URLS = (
     "http://.example.com/",  # empty label
     "http://example..com/",  # empty label
@@ -71,6 +83,17 @@ def test_find_title_invalid(site):
 @pytest.mark.parametrize("site", PRIVATE_URLS)
 def test_find_title_private(site):
     assert find_title(site) is None
+
+
+def test_find_title_error_enabled(error_response):
+    with unittest.mock.patch("requests.Session.get", return_value=error_response):
+        title, hostname = find_title("http://example.com", title_on_error=True)
+        assert title == "You don't belong here"
+
+
+def test_find_title_error_disabled(error_response):
+    with unittest.mock.patch("requests.Session.get", return_value=error_response):
+        assert find_title("http://example.com", title_on_error=False) is None
 
 
 def test_check_callbacks(mockbot):

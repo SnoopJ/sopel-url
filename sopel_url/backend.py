@@ -124,6 +124,7 @@ def process_urls(
             allow_local=bot.config.url.enable_private_resolution,
             unsafe_urls=unsafe_urls,
             unsafe_domains=bot.memory.get("safety_cache_local", set()),
+            title_on_error=bot.config.url.title_on_error,
         )
         if not title_results:
             # No title found: don't handle this URL
@@ -185,6 +186,7 @@ def find_title(
     allow_local: bool = False,
     unsafe_urls: Iterable[str] | None = None,
     unsafe_domains: Iterable[str] | None = None,
+    title_on_error: bool = True,
 ) -> tuple[str, str] | None:
     """Fetch the title for the given URL.
 
@@ -264,6 +266,9 @@ def find_title(
                     return None
                 url = response.headers["Location"]
                 continue
+            elif not title_on_error and not response.ok:
+                LOGGER.debug("URL %r errored with code %r, ignoring", url, response.status_code)
+                return None
 
             content_bytes = b''
             for chunk in response.iter_content(chunk_size=512):

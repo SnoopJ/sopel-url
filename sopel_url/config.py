@@ -45,3 +45,10 @@ class UrlSection(types.StaticSection):
     attacker can change which IP address a domain name refers to between when
     Sopel checks it and when the HTTP request is made.
     """
+    title_on_error = types.BooleanAttribute(
+        'title_on_error', default=True)
+    """Attempt to title URLs that produce an HTTP error.
+
+    If enabled, the HTTP status code of a response is ignored when trying to
+    produce a title. Disable to ignore URLs that lead to error responses.
+    """
