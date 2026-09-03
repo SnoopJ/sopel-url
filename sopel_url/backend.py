@@ -267,7 +267,11 @@ def find_title(
                 url = response.headers["Location"]
                 continue
             elif not title_on_error and not response.ok:
-                LOGGER.debug("URL %r errored with code %r, ignoring", url, response.status_code)
+                LOGGER.debug(
+                    "URL %r errored with code %r, ignoring",
+                    url,
+                    response.status_code
+                )
                 return None
 
             content_bytes = b''

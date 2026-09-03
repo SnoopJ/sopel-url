@@ -56,7 +56,9 @@ def mockbot(configfactory, mockplugin):
 def error_response():
     response = requests.Response()
     response.status_code = 403
-    response.raw = BytesIO(b"<html><head><title>You don't belong here</title></head></html>")
+    response.raw = BytesIO(
+        b"<html><head><title>You don't belong here</title></head></html>"
+    )
 
     yield response
 
@@ -86,13 +88,19 @@ def test_find_title_private(site):
 
 
 def test_find_title_error_enabled(error_response):
-    with unittest.mock.patch("requests.Session.get", return_value=error_response):
+    with unittest.mock.patch(
+        "requests.Session.get",
+        return_value=error_response
+    ):
         title, hostname = find_title("http://example.com", title_on_error=True)
         assert title == "You don't belong here"
 
 
 def test_find_title_error_disabled(error_response):
-    with unittest.mock.patch("requests.Session.get", return_value=error_response):
+    with unittest.mock.patch(
+        "requests.Session.get",
+        return_value=error_response
+    ):
         assert find_title("http://example.com", title_on_error=False) is None
 
 
