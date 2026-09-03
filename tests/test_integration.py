@@ -124,6 +124,7 @@ def test_configure(tmpconfig: Config, monkeypatch: MonkeyPatch):
         '$',  # exclusion_char
         '79',  # shorten_url_length
         'y',  # enable_private_resolution
+        'y',  # title_on_error
     )))
     monkeypatch.setattr('sys.stdin', user_inputs)
     plugin.configure(tmpconfig)
